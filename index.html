@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Deltarune Save Generator</title>
+    <title>Deltarune Real Save Generator</title>
     <style>
         @import url('https://googleapis.com');
-
         body {
             background-color: #000;
             color: #fff;
@@ -18,172 +17,139 @@
             min-height: 100vh;
             margin: 0;
             padding: 20px;
-            box-sizing: border-box;
         }
-
         .save-card {
             border: 4px solid #fff;
             padding: 25px;
             width: 100%;
-            max-width: 500px;
+            max-width: 520px;
             background-color: #000;
-            box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
         }
-
-        .header {
-            color: #ffff00;
-            font-size: 24px;
-            font-weight: bold;
-            margin-bottom: 20px;
-            text-align: center;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-
-        .section {
-            margin-bottom: 15px;
-            font-size: 18px;
-            line-height: 1.5;
-        }
-
-        .label {
-            color: #ff00ff;
-            font-weight: bold;
-        }
-
-        .value {
-            color: #ffffff;
-        }
-
-        .inventory-list {
-            margin: 5px 0 0 20px;
-            padding: 0;
-            list-style-type: square;
-            color: #00ffff;
-        }
-
+        .header { color: #ffff00; font-size: 22px; font-weight: bold; text-align: center; margin-bottom: 20px; }
+        .section { margin-bottom: 12px; font-size: 16px; }
+        .label { color: #ff00ff; font-weight: bold; }
+        .value { color: #ffffff; }
         .btn {
-            background-color: #000;
-            color: #fff;
-            border: 2px solid #fff;
-            padding: 10px 20px;
-            font-family: 'Courier Prime', 'Courier New', monospace;
-            font-size: 18px;
-            cursor: pointer;
-            margin-top: 25px;
-            width: 100%;
-            transition: all 0.2s ease;
+            background-color: #000; color: #fff; border: 2px solid #fff;
+            padding: 12px; font-family: 'Courier Prime', monospace; font-size: 18px;
+            cursor: pointer; width: 100%; margin-top: 15px; transition: 0.2s;
         }
-
-        .btn:hover {
-            background-color: #fff;
-            color: #000;
-            font-weight: bold;
-        }
-
-        .btn:active {
-            transform: scale(0.98);
+        .btn:hover { background-color: #fff; color: #000; font-weight: bold; }
+        .select-chapter {
+            background: #000; color: #00ffff; border: 1px solid #00ffff;
+            padding: 5px; font-family: monospace; font-size: 16px; margin-bottom: 15px; width: 100%;
         }
     </style>
 </head>
 <body>
 
     <div class="save-card">
-        <div class="header">--- DELTARUNE SAVE ---</div>
+        <div class="header">ГЕНЕРАТОР НАСТОЯЩИХ СЕЙВОВ DELTARUNE</div>
         
-        <div class="section">
-            <span class="label">Место:</span> 
-            <span id="location" class="value">-</span>
-        </div>
-        
-        <div class="section">
-            <span class="label">Оружие Крис:</span> 
-            <span id="weapon" class="value">-</span>
-        </div>
-        
-        <div class="section">
-            <span class="label">Броня:</span> 
-            <span id="armor" class="value">-</span>
-        </div>
-        
-        <div class="section">
-            <span class="label">Инвентарь:</span>
-            <ul id="inventory" class="inventory-list">
-                <li>-</li>
-            </ul>
-        </div>
+        <label style="color:#00ffff;">Выберите главу для сейва:</label>
+        <select id="chapterSelect" class="select-chapter">
+            <option value="1">Глава 1 (Файл filech1_0)</option>
+            <option value="2">Глава 2 (Файл filech2_0)</option>
+        </select>
 
-        <button class="btn" onclick="generateSave()">ГЕНЕРИРОВАТЬ</button>
+        <div class="section"><span class="label">Выпавшая локация (ID комнаты):</span> <span id="view-room" class="value">-</span></div>
+        <div class="section"><span class="label">Оружие Крис:</span> <span id="view-weapon" class="value">-</span></div>
+        <div class="section"><span class="label">Броня Крис:</span> <span id="view-armor" class="value">-</span></div>
+        <div class="section"><span class="label">Инвентарь:</span> <span id="view-inv" class="value">-</span></div>
+        <div class="section"><span class="label">Валюта (D$):</span> <span id="view-money" class="value">-</span></div>
+
+        <button class="btn" onclick="generateAndDownloadSave()">СФОРМИРОВАТЬ И СКАЧАТЬ ФАЙЛ</button>
     </div>
 
     <script>
-        // Данные для генерации (можно дополнять своими предметами)
-        const locations = [
-            "Castle Town (Город Замка)",
-            "Fields (Поля)",
-            "Scarlet Forest (Алый Лес)",
-            "Card Castle (Замок Карт)",
-            "Cyber Field (Кибер-поле)",
-            "Cyber City (Кибер-город)",
-            "Queen's Mansion (Особняк Королевы)",
-            "Hometown - Library (Библиотека)"
+        // Соответствие игровых ID и названий для отображения на экране
+        const rooms = [
+            {id: "42", name: "Fields - Большой пазл"},
+            {id: "81", name: "Scarlet Forest - Рядом с Клавером"},
+            {id: "109", name: "Card Castle - Тюрьма"},
+            {id: "140", name: "Cyber Field - Музыкальная лавка"},
+            {id: "182", name: "Cyber City - Аллея Спамтона"},
+            {id: "220", name: "Mansion - Особняк Королевы (Вход)"}
         ];
 
         const weapons = [
-            "Wood Blade (Деревянный клинок)",
-            "Mane Ax (Топор Гривы)",
-            "Red Scarf (Красный шарф)",
-            "Bounce Blade (Пружинящий клинок)",
-            "Devilsknife (Дьявольский нож)",
-            "Auto Sci (Авто-ножницы)",
-            "Mecha Saber (Меха-сабля)",
-            "PuppetScarf (Шарф марионетки)"
+            {id: "1", name: "Wood Blade"}, {id: "2", name: "Mane Ax"}, 
+            {id: "6", name: "Devilsknife"}, {id: "9", name: "PuppetScarf"}
         ];
 
         const armors = [
-            "Amber Card (Янтарная карта)",
-            "Dice Brace (Кубический браслет)",
-            "White Ribbon (Белая лента)",
-            "IronShackle (Железные кандалы)",
-            "Jevilstail (Хвост Джевила)",
-            "Chain Mail (Кольчуга)",
-            "Brave Axle (Ось храбрости)",
-            "Dealmaker (Заключитель сделок)"
+            {id: "1", name: "Amber Card"}, {id: "2", name: "Dice Brace"}, 
+            {id: "5", name: "Jevilstail"}, {id: "12", name: "Dealmaker"}
         ];
 
         const items = [
-            "Dark Candy", "Choco Diamond", "HeartsDonut", "Lancer Cookie",
-            "Spin Cake", "ReviveMint", "Top Chef Cake", "GlowWrist",
-            "Manual", "Clubs Sandwich", "S.Potion", "CD Bag",
-            "Light Candy", "ButtsPie", "Spaghetti", "Tea (Kris)",
-            "Tea (Susie)", "Tea (Ralsei)", "Tea (Noelle)", "TensionMax"
+            {id: "1", name: "Dark Candy"}, {id: "2", name: "ReviveMint"}, 
+            {id: "4", name: "Spin Cake"}, {id: "8", name: "Lancer Cookie"}
         ];
 
-        function getRandomElement(arr) {
-            return arr[Math.floor(Math.random() * arr.length)];
-        }
-
-        function generateSave() {
-            // Рандомим локацию, оружие и броню
-            document.getElementById('location').innerText = getRandomElement(locations);
-            document.getElementById('weapon').innerText = getRandomElement(weapons);
-            document.getElementById('armor').innerText = getRandomElement(armors);
-
-            // Рандомим инвентарь (случайное количество предметов от 2 до 5)
-            const inventoryList = document.getElementById('inventory');
-            inventoryList.innerHTML = ''; // Очищаем старый список
+        function generateAndDownloadSave() {
+            const ch = document.getElementById('chapterSelect').value;
             
-            const itemCount = Math.floor(Math.random() * 4) + 2; // от 2 до 5 предметов
+            // Выбираем рандомные данные
+            const room = rooms[Math.floor(Math.random() * rooms.length)];
+            const wp = weapons[Math.floor(Math.random() * weapons.length)];
+            const ar = armors[Math.floor(Math.random() * armors.length)];
+            const money = Math.floor(Math.random() * 5000) + 100; // от 100 до 5100 D$
             
-            for (let i = 0; i < itemCount; i++) {
-                const li = document.createElement('li');
-                li.innerText = getRandomElement(items);
-                inventoryList.appendChild(li);
+            // Заполняем 4 слота инвентаря случайными предметами
+            let invIds = [];
+            let invNames = [];
+            for(let i=0; i<4; i++){
+                let it = items[Math.floor(Math.random() * items.length)];
+                invIds.push(it.id);
+                invNames.push(it.name);
             }
-        }
 
-        // Генерируем первый вариант сразу при загрузке страницы
-        window.onload = generateSave;
+            // Выводим инфу на экран, чтоб пользователь видел, что сгенерировалось
+            document.getElementById('view-room').innerText = `${room.name} (ID: ${room.id})`;
+            document.getElementById('view-weapon').innerText = wp.name;
+            document.getElementById('view-armor').innerText = ar.name;
+            document.getElementById('view-inv').innerText = invNames.join(', ');
+            document.getElementById('view-money').innerText = money + " D$";
+
+            // Собираем структуру файла сохранения Deltarune. 
+            // Это массив строк. Каждая строка имеет критически важное значение для игры.
+            let saveLines = [];
+            
+            // Заполняем болванку базовыми данными (около 100 строк, чтобы игра не вылетала)
+            for (let i = 0; i < 150; i++) {
+                saveLines[i] = "0"; 
+            }
+
+            // Прописываем ключевые переменные сейва на их законные позиции в коде:
+            saveLines[0] = "Kris";      // Имя игрока
+            saveLines[1] = "1";         // Уровень (LV)
+            saveLines[3] = room.id;     // ID комнаты (Где появится персонаж)
+            saveLines[10] = money;      // Деньги (D$)
+            
+            // Экипировка Крис (Оружие и броня)
+            saveLines[20] = wp.id;      // Оружие в слоте Крис
+            saveLines[21] = ar.id;      // Броня в слоте Крис
+
+            // Запись предметов в инвентарь (В игре они идут подряд)
+            saveLines[40] = invIds[0];  // Предмет 1
+            saveLines[41] = invIds[1];  // Предмет 2
+            saveLines[42] = invIds[2];  // Предмет 3
+            saveLines[43] = invIds[3];  // Предмет 4
+
+            // Превращаем массив строк в один текстовый блок с переносами строк
+            const fileContent = saveLines.join("\n");
+            
+            // Создаем скачивание файла без расширения (как требует игра)
+            const blob = new Blob([fileContent], { type: "text/plain" });
+            const link = document.createElement("a");
+            
+            // Формируем правильное название файла для выбранной главы
+            link.download = `filech${ch}_0`; 
+            
+            link.href = window.URL.createObjectURL(blob);
+            link.click();
+        }
     </script>
 </body>
 </html>
